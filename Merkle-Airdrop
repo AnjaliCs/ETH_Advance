@@ -1,0 +1,34 @@
+// SPDX-License-Identifier : MIT
+pragma solidity^0.8.10;
+
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/MerkleProof.sol";
+import  "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
+import "https://github.com/gliechtenstein/erc20/blob/master/contracts/SafeMath.sol";
+
+contract Airdrop {
+    using safeERC20 for IERC20;
+
+    address public immutable Token;
+    bytes32 public immutable merkleRoot;
+
+    mapping(address => bool) public claimed;
+    event claim(address indexed claimer);
+
+    constructor(address _token, bytes32 _merkleRoot) {
+        Token = _token;
+        merkleRoot = _merkleRoot;
+    }
+
+
+    function claim(bytes32[] calldata _merkleProof) external {
+        require(canClaim(msg.sender, _merkleProof), "Address is not eligible to claim Airdrop");
+        claimed[msg.sender] = true;
+        IERC20(Token).safeTransfer(msg.sender, 1 ether);
+        emit claim(msg.sender);
+    }
+
+
+    function canClaim(address claimer, bytes32[] calldata merkleProof) public view returns(bool) {
+        return !claimed[claimer] && merkleProof.verify(merkleProof, merkleRoot, keccak256(abi.encodePacked(claimer)));
+    }
+}
